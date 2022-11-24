@@ -1,12 +1,6 @@
 package log;
 
 import java.util.*;
-
-/**
- * Что починить:
- * 1. Этот класс порождает утечку ресурсов (связанные слушатели оказываются
- * удерживаемыми в памяти)
- */
 public class LogWindowSource
 {
     private final int m_iQueueLength;
