@@ -8,7 +8,11 @@ public class RobotLogic {
     private static final double maxVelocity = 0.1;
     private static final double maxAngularVelocity = 0.004;
 
-    public Robot getNextStep(Robot robot, Point target){
+    public static double getDistanceToMouse(Robot robot, Point mouse){
+        return distance(mouse.x, mouse.y, robot.x, robot.y);
+    }
+    public static Robot getNextStep(Robot robot){
+        var target = robot.target;
         double distance = distance(target.x, target.y,
                 robot.x, robot.y);
         if (distance < 0.5)
@@ -33,7 +37,7 @@ public class RobotLogic {
         return moveRobot(robot, velocity, angularVelocity, 10);
     }
 
-    private Robot moveRobot(Robot robot, double velocity, double angularVelocity, double duration)
+    private static Robot moveRobot(Robot robot, double velocity, double angularVelocity, double duration)
     {
         velocity = applyLimits(velocity, 0, maxVelocity);
         angularVelocity = applyLimits(angularVelocity, -maxAngularVelocity, maxAngularVelocity);
@@ -60,9 +64,7 @@ public class RobotLogic {
     {
         if (value < min)
             return min;
-        if (value > max)
-            return max;
-        return value;
+        return Math.min(value, max);
     }
     private static double asNormalizedRadians(double angle)
     {
@@ -82,8 +84,7 @@ public class RobotLogic {
         double diffY = y1 - y2;
         return Math.sqrt(diffX * diffX + diffY * diffY);
     }
-    private static double angleTo(double fromX, double fromY, double toX, double toY)
-    {
+    private static double angleTo(double fromX, double fromY, double toX, double toY) {
         double diffX = toX - fromX;
         double diffY = toY - fromY;
 

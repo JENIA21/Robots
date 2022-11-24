@@ -4,7 +4,6 @@ import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
@@ -19,91 +18,82 @@ import log.Logger;
 import logic.Robot;
 import logic.RobotLogic;
 
-public class GameVisualizer extends JPanel
-{
+public class GameVisualizer extends JPanel {
     private final Timer m_timer = initTimer();
-    
-    private static Timer initTimer() 
-    {
+
+    private static Timer initTimer() {
         Timer timer = new Timer("events generator", true);
         return timer;
     }
+
     private volatile List<Robot> m_robots = new ArrayList<>();
-    private volatile Point m_targetPosition = new Point(150, 100);
-    private final RobotLogic m_robotLogic = new RobotLogic();
-    public GameVisualizer()
-    {
-        m_robots.add(new Robot(100, 100, "Robot 1"));
-        m_robots.add(new Robot(100, 200, "Robot 2"));
-        m_timer.schedule(new TimerTask()
-        {
+    private volatile Robot m_selectedRobot;
+
+    public GameVisualizer() {
+        m_robots.add(new Robot(100, 100, "Robot 0"));
+        m_selectedRobot = m_robots.get(0);
+        m_timer.schedule(new TimerTask() {
             @Override
-            public void run()
-            {
+            public void run() {
                 onRedrawEvent();
             }
         }, 0, 5);
-        m_timer.schedule(new TimerTask()
-        {
+        m_timer.schedule(new TimerTask() {
             @Override
-            public void run()
-            {
+            public void run() {
                 onModelUpdateEvent();
             }
         }, 0, 10);
-        addMouseListener(new MouseAdapter()
-        {
+        addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseClicked(MouseEvent e)
-            {
-                m_targetPosition = e.getPoint();
-                Logger.debug("Позиция цели изменена:" +
-                        "\nx: " + m_targetPosition.x +
-                        "\ny: " + m_targetPosition.y);
-                for (var robot : m_robots)
-                    robot.targetAchieved = false;
-                repaint();
+            public void mouseClicked(MouseEvent e) {
+                mouseClickerHandler(e);
             }
         });
         setDoubleBuffered(true);
     }
-    protected void onRedrawEvent()
-    {
+
+    public void addRobot() {
+        var robot = new Robot(100, 100, "Robot" + m_robots.size());
+        m_robots.add(robot);
+    }
+
+    protected void onRedrawEvent() {
         EventQueue.invokeLater(this::repaint);
     }
 
-    protected void onModelUpdateEvent()
-    {
-        for(int i = 0; i < m_robots.size(); i++)
-            m_robots.set(i, m_robotLogic.getNextStep(m_robots.get(i), m_targetPosition));
+    protected void onModelUpdateEvent() {
+        m_robots.replaceAll(robot -> {
+            if (robot.target != null)
+                return RobotLogic.getNextStep(robot);
+            return robot;
+        });
     }
-    private static int round(double value)
-    {
-        return (int)(value + 0.5);
+
+    private static int round(double value) {
+        return (int) (value + 0.5);
     }
-    
+
     @Override
-    public void paint(Graphics g)
-    {
+    public void paint(Graphics g) {
         super.paint(g);
-        Graphics2D g2d = (Graphics2D)g;
-        for (var robot: m_robots)
+        Graphics2D g2d = (Graphics2D) g;
+        for (var robot : m_robots) {
             drawRobot(g2d, round(robot.x), round(robot.y), robot.direction);
-        drawTarget(g2d, m_targetPosition.x, m_targetPosition.y);
+            if (robot.target != null)
+                drawTarget(g2d, robot.target.x, robot.target.y);
+        }
     }
-    
-    private static void fillOval(Graphics g, int centerX, int centerY, int diam1, int diam2)
-    {
+
+    private static void fillOval(Graphics g, int centerX, int centerY, int diam1, int diam2) {
         g.fillOval(centerX - diam1 / 2, centerY - diam2 / 2, diam1, diam2);
     }
-    
-    private static void drawOval(Graphics g, int centerX, int centerY, int diam1, int diam2)
-    {
+
+    private static void drawOval(Graphics g, int centerX, int centerY, int diam1, int diam2) {
         g.drawOval(centerX - diam1 / 2, centerY - diam2 / 2, diam1, diam2);
     }
-    
-    private void drawRobot(Graphics2D g, int x, int y, double direction)
-    {
+
+    private void drawRobot(Graphics2D g, int x, int y, double direction) {
         AffineTransform t = AffineTransform.getRotateInstance(direction, x, y);
         g.setTransform(t);
         g.setColor(Color.MAGENTA);
@@ -115,14 +105,39 @@ public class GameVisualizer extends JPanel
         g.setColor(Color.BLACK);
         drawOval(g, x + 10, y, 5, 5);
     }
-    
-    private void drawTarget(Graphics2D g, int x, int y)
-    {
-        AffineTransform t = AffineTransform.getRotateInstance(0, 0, 0); 
+
+    private void drawTarget(Graphics2D g, int x, int y) {
+        AffineTransform t = AffineTransform.getRotateInstance(0, 0, 0);
         g.setTransform(t);
         g.setColor(Color.GREEN);
         fillOval(g, x, y, 5, 5);
         g.setColor(Color.BLACK);
         drawOval(g, x, y, 5, 5);
+    }
+
+    private void mouseClickerHandler(MouseEvent e) {
+        var mousePoint = e.getPoint();
+        if(e.getButton() == MouseEvent.BUTTON1){
+            Logger.debug("Новая цель для " + m_selectedRobot.name + ":" +
+                    "\nx: " + mousePoint.x +
+                    "\ny: " + mousePoint.y);
+            m_selectedRobot.target = mousePoint;
+            m_selectedRobot.targetAchieved = false;
+            repaint();
+        }
+        else if(e.getButton() == MouseEvent.BUTTON3){
+            double minDistance = RobotLogic.getDistanceToMouse(m_robots.get(0), mousePoint);
+            m_selectedRobot = m_robots.get(0);
+            for (int i = 1; i < m_robots.size(); i++) {
+                var robot = m_robots.get(i);
+                double distance = RobotLogic.getDistanceToMouse(robot, mousePoint);
+                if(RobotLogic.getDistanceToMouse(robot, mousePoint) < minDistance)
+                {
+                    minDistance = distance;
+                    m_selectedRobot = robot;
+                }
+            }
+            Logger.info("Выбран " + m_selectedRobot.name);
+        }
     }
 }

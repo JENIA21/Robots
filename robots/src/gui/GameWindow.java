@@ -17,4 +17,7 @@ public class GameWindow extends JInternalFrame
         getContentPane().add(panel);
         pack();
     }
+    public void addBot(){
+        m_visualizer.addRobot();
+    }
 }

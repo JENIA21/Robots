@@ -14,18 +14,13 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
+import gui.menu.MenuGenerator;
 import log.Logger;
 
-/**
- * Что требуется сделать:
- * 1. Метод создания меню перегружен функционалом и трудно читается. 
- * Следует разделить его на серию более простых методов (или вообще выделить отдельный класс).
- *
- */
 public class MainApplicationFrame extends JFrame
 {
     private final JDesktopPane desktopPane = new JDesktopPane();
-    
+    private GameWindow gameWindow;
     public MainApplicationFrame() {
         //Make the big window be indented 50 pixels from each edge
         //of the screen.
@@ -41,7 +36,7 @@ public class MainApplicationFrame extends JFrame
         LogWindow logWindow = createLogWindow();
         addWindow(logWindow);
 
-        GameWindow gameWindow = new GameWindow();
+        gameWindow = new GameWindow();
         gameWindow.setSize(400,  400);
         addWindow(gameWindow);
 
@@ -67,40 +62,11 @@ public class MainApplicationFrame extends JFrame
     
     private JMenuBar generateMenuBar()
     {
-        JMenuBar menuBar = new JMenuBar();
-        
-        JMenu lookAndFeelMenu = new JMenu("Режим отображения");
-        lookAndFeelMenu.setMnemonic(KeyEvent.VK_V);
-        lookAndFeelMenu.getAccessibleContext().setAccessibleDescription(
-                "Управление режимом отображения приложения");
+        var menuBar = new JMenuBar();
 
-        JMenuItem systemLookAndFeel = new JMenuItem("Системная схема", KeyEvent.VK_S);
-        systemLookAndFeel.addActionListener((event) -> {
-            setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            this.invalidate();
-        });
-        lookAndFeelMenu.add(systemLookAndFeel);
-
-        JMenuItem crossplatformLookAndFeel = new JMenuItem("Универсальная схема", KeyEvent.VK_S);
-        crossplatformLookAndFeel.addActionListener((event) -> {
-            setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-            this.invalidate();
-        });
-        lookAndFeelMenu.add(crossplatformLookAndFeel);
-
-        JMenu testMenu = new JMenu("Тесты");
-        testMenu.setMnemonic(KeyEvent.VK_T);
-        testMenu.getAccessibleContext().setAccessibleDescription(
-                "Тестовые команды");
-
-        JMenuItem addLogMessageItem = new JMenuItem("Сообщение в лог", KeyEvent.VK_S);
-        addLogMessageItem.addActionListener((event) -> {
-            Logger.debug("Новая строка");
-        });
-        testMenu.add(addLogMessageItem);
-
-        menuBar.add(lookAndFeelMenu);
-        menuBar.add(testMenu);
+        menuBar.add(createLookAndFeelMenu());
+        menuBar.add(createTestMenu());
+        menuBar.add(createGameMenu());
         return menuBar;
     }
     
@@ -116,5 +82,41 @@ public class MainApplicationFrame extends JFrame
         {
             // just ignore
         }
+    }
+    private JMenu createLookAndFeelMenu(){
+        var lookAndFeelMenu = MenuGenerator.createMenu("Режим отображения",
+                "Управление режимом отображения приложения",
+                KeyEvent.VK_V);
+
+        var systemLookAndFeel = MenuGenerator.createMenuItem("Системная схема",
+                KeyEvent.VK_S, (event) -> {
+                    setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                    this.invalidate(); });
+
+        var crossplatformLookAndFeel = MenuGenerator.createMenuItem("Универсальная схема",
+                KeyEvent.VK_U, (event) -> {
+                    setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+                    this.invalidate(); });
+
+        lookAndFeelMenu.add(systemLookAndFeel);
+        lookAndFeelMenu.add(crossplatformLookAndFeel);
+        return lookAndFeelMenu;
+    }
+    private JMenu createTestMenu(){
+        var testMenu = MenuGenerator.createMenu("Тесты","Тестовые команды",KeyEvent.VK_T);
+        var addLogMessageItem = MenuGenerator.createMenuItem("Сообщение в лог",
+                KeyEvent.VK_S, (event) -> Logger.debug("Новая строка"));
+        testMenu.add(addLogMessageItem);
+        return testMenu;
+    }
+    private JMenu createGameMenu(){
+        var gameMenu = MenuGenerator.createMenu("Управление",
+                "Управление симуляцией", KeyEvent.VK_L);
+        var addRobot = MenuGenerator.createMenuItem("Добавить робота на стандартную позицию",
+                KeyEvent.VK_A, (event) -> {
+            gameWindow.addBot();
+            Logger.debug("Робот добавлен");});
+        gameMenu.add(addRobot);
+        return gameMenu;
     }
 }
