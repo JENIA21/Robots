@@ -1,32 +1,21 @@
 package log;
 
-import java.util.ArrayList;
-import java.util.Collections;
-
-/**
- * Что починить:
- * 1. Этот класс порождает утечку ресурсов (связанные слушатели оказываются
- * удерживаемыми в памяти)
- * 2. Этот класс хранит активные сообщения лога, но в такой реализации он 
- * их лишь накапливает. Надо же, чтобы количество сообщений в логе было ограничено 
- * величиной m_iQueueLength (т.е. реально нужна очередь сообщений 
- * ограниченного размера) 
- */
+import java.util.*;
 public class LogWindowSource
 {
-    private int m_iQueueLength;
-    
-    private ArrayList<LogEntry> m_messages;
-    private final ArrayList<LogChangeListener> m_listeners;
+    private final int m_iQueueLength;
+
+    private final Queue<LogEntry> m_messages;
+    private final List<LogChangeListener> m_listeners;
     private volatile LogChangeListener[] m_activeListeners;
-    
-    public LogWindowSource(int iQueueLength) 
+
+    public LogWindowSource(int iQueueLength)
     {
         m_iQueueLength = iQueueLength;
-        m_messages = new ArrayList<LogEntry>(iQueueLength);
-        m_listeners = new ArrayList<LogChangeListener>();
+        m_messages = new ArrayDeque<>();
+        m_listeners = new ArrayList<>();
     }
-    
+
     public void registerListener(LogChangeListener listener)
     {
         synchronized(m_listeners)
@@ -35,7 +24,7 @@ public class LogWindowSource
             m_activeListeners = null;
         }
     }
-    
+
     public void unregisterListener(LogChangeListener listener)
     {
         synchronized(m_listeners)
@@ -44,10 +33,12 @@ public class LogWindowSource
             m_activeListeners = null;
         }
     }
-    
+
     public void append(LogLevel logLevel, String strMessage)
     {
         LogEntry entry = new LogEntry(logLevel, strMessage);
+        if(size() >= m_iQueueLength)
+            m_messages.poll();
         m_messages.add(entry);
         LogChangeListener [] activeListeners = m_activeListeners;
         if (activeListeners == null)
@@ -66,7 +57,7 @@ public class LogWindowSource
             listener.onLogChanged();
         }
     }
-    
+
     public int size()
     {
         return m_messages.size();
@@ -79,7 +70,7 @@ public class LogWindowSource
             return Collections.emptyList();
         }
         int indexTo = Math.min(startFrom + count, m_messages.size());
-        return m_messages.subList(startFrom, indexTo);
+        return m_messages.stream().toList().subList(startFrom, indexTo);
     }
 
     public Iterable<LogEntry> all()
