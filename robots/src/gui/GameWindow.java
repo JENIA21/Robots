@@ -1,5 +1,7 @@
 package gui;
 
+import utilities.parsedclass.GameVisualizerData;
+
 import java.awt.BorderLayout;
 
 import javax.swing.JInternalFrame;
@@ -7,7 +9,7 @@ import javax.swing.JPanel;
 
 public class GameWindow extends JInternalFrame
 {
-    private final GameVisualizer m_visualizer;
+    private GameVisualizer m_visualizer;
     public GameWindow() 
     {
         super("Игровое поле", true, true, true, true);
@@ -19,5 +21,11 @@ public class GameWindow extends JInternalFrame
     }
     public void addBot(){
         m_visualizer.addRobot();
+    }
+    public GameVisualizerData getGameVisualizer(){
+        return m_visualizer.getModel();
+    }
+    public void setGameVisualizer(GameVisualizerData gvd){
+        m_visualizer.setModel(gvd);
     }
 }
