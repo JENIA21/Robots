@@ -5,13 +5,13 @@ import log.Logger;
 import java.awt.*;
 
 public class RobotLogic {
-    private static final double maxVelocity = 0.1;
-    private static final double maxAngularVelocity = 0.004;
+    private final double maxVelocity = 0.1;
+    private final double maxAngularVelocity = 0.004;
 
-    public static double getDistanceToMouse(Robot robot, Point mouse){
+    public double getDistanceToMouse(Robot robot, Point mouse){
         return distance(mouse.x, mouse.y, robot.x, robot.y);
     }
-    public static Robot getNextStep(Robot robot){
+    public Robot getNextStep(Robot robot){
         var target = robot.target;
         double distance = distance(target.x, target.y,
                 robot.x, robot.y);
@@ -37,7 +37,7 @@ public class RobotLogic {
         return moveRobot(robot, velocity, angularVelocity, 10);
     }
 
-    private static Robot moveRobot(Robot robot, double velocity, double angularVelocity, double duration)
+    private Robot moveRobot(Robot robot, double velocity, double angularVelocity, double duration)
     {
         velocity = applyLimits(velocity, 0, maxVelocity);
         angularVelocity = applyLimits(angularVelocity, -maxAngularVelocity, maxAngularVelocity);
@@ -60,13 +60,13 @@ public class RobotLogic {
         robot.direction = asNormalizedRadians(robot.direction + angularVelocity * duration);
         return robot;
     }
-    private static double applyLimits(double value, double min, double max)
+    private double applyLimits(double value, double min, double max)
     {
         if (value < min)
             return min;
         return Math.min(value, max);
     }
-    private static double asNormalizedRadians(double angle)
+    private double asNormalizedRadians(double angle)
     {
         while (angle < 0)
         {
@@ -78,13 +78,13 @@ public class RobotLogic {
         }
         return angle;
     }
-    private static double distance(double x1, double y1, double x2, double y2)
+    private double distance(double x1, double y1, double x2, double y2)
     {
         double diffX = x1 - x2;
         double diffY = y1 - y2;
         return Math.sqrt(diffX * diffX + diffY * diffY);
     }
-    private static double angleTo(double fromX, double fromY, double toX, double toY) {
+    private double angleTo(double fromX, double fromY, double toX, double toY) {
         double diffX = toX - fromX;
         double diffY = toY - fromY;
 

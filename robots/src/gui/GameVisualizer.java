@@ -4,42 +4,45 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import javax.swing.JPanel;
 
 import log.Logger;
 import logic.Robot;
 import logic.RobotLogic;
+import logic.TargetPoint;
+import utilities.parsedclass.GameVisualizerData;
 
 public class GameVisualizer extends JPanel {
-    private final Timer m_timer = initTimer();
-
     private static Timer initTimer() {
         Timer timer = new Timer("events generator", true);
         return timer;
     }
-
-    private volatile List<Robot> m_robots = new ArrayList<>();
-    private volatile Robot m_selectedRobot;
-    private volatile List<Rectangle> m_rectangles = new ArrayList<>();
+    private volatile RobotLogic robotLogic = new RobotLogic();
+    private volatile List<Robot> m_robots = new Vector<>();
+    private volatile int m_selectedRobot;
+    private volatile List<Rectangle> m_rectangles = new Vector<>();
     private volatile Point m_firthCorner = null;
 
     public GameVisualizer() {
         m_robots.add(new Robot(100, 100, "Robot 0"));
-        m_selectedRobot = m_robots.get(0);
-        m_timer.schedule(new TimerTask() {
+        m_selectedRobot = 0;
+        Timer m_timer = initTimer();
+        m_timer.schedule(new TimerTask()
+        {
             @Override
-            public void run() {
+            public void run()
+            {
                 onRedrawEvent();
             }
-        }, 0, 5);
-        m_timer.schedule(new TimerTask() {
+        }, 0, 50);
+        m_timer.schedule(new TimerTask()
+        {
             @Override
-            public void run() {
+            public void run()
+            {
                 onModelUpdateEvent();
             }
         }, 0, 10);
@@ -56,7 +59,19 @@ public class GameVisualizer extends JPanel {
         var robot = new Robot(100, 100, "Robot" + m_robots.size());
         m_robots.add(robot);
     }
-
+    public GameVisualizerData getModel(){
+        var gvd = new GameVisualizerData(m_robots, m_selectedRobot, m_rectangles);
+        return gvd;
+    }
+    public void setModel(GameVisualizerData gvd){
+        if(gvd != null){
+            m_robots.clear();
+            m_robots.addAll(gvd.robots);
+            m_selectedRobot = gvd.selectedRobot;
+            m_rectangles.clear();
+            m_rectangles.addAll(gvd.rectangles);
+        }
+    }
     protected void onRedrawEvent() {
         EventQueue.invokeLater(this::repaint);
     }
@@ -64,7 +79,7 @@ public class GameVisualizer extends JPanel {
     protected void onModelUpdateEvent() {
         m_robots.replaceAll(robot -> {
             if (robot.target != null)
-                return RobotLogic.getNextStep(robot);
+                return robotLogic.getNextStep(robot);
             return robot;
         });
     }
@@ -77,8 +92,9 @@ public class GameVisualizer extends JPanel {
     public void paint(Graphics g) {
         super.paint(g);
         Graphics2D g2d = (Graphics2D) g;
-        for (var robot : m_robots) {
-            drawRobot(g2d, round(robot.x), round(robot.y), robot.direction);
+        for (int i = 0; i < m_robots.size(); i++) {
+            var robot = m_robots.get(i);
+            drawRobot(g2d, robot.x, robot.y, robot.direction);
             if (robot.target != null)
                 drawTarget(g2d, robot.target.x, robot.target.y);
         }
@@ -94,7 +110,9 @@ public class GameVisualizer extends JPanel {
         g.drawOval(centerX - diam1 / 2, centerY - diam2 / 2, diam1, diam2);
     }
 
-    private void drawRobot(Graphics2D g, int x, int y, double direction) {
+    private void drawRobot(Graphics2D g, double dx, double dy, double direction) {
+        int x = (int)dx;
+        int y = (int)dy;
         AffineTransform t = AffineTransform.getRotateInstance(direction, x, y);
         g.setTransform(t);
         g.setColor(Color.MAGENTA);
@@ -142,34 +160,38 @@ public class GameVisualizer extends JPanel {
                 return;
             }
 
-            Logger.debug("Новая цель для " + m_selectedRobot.name + ":" +
+            Logger.debug("Новая цель для " + m_robots.get(m_selectedRobot).name + ":" +
                     "\nx: " + mousePoint.x +
                     "\ny: " + mousePoint.y);
-            m_selectedRobot.target = mousePoint;
-            m_selectedRobot.targetAchieved = false;
+            if(m_robots.get(m_selectedRobot).target == null)
+                m_robots.get(m_selectedRobot).target = new TargetPoint(0,0);
+            m_robots.get(m_selectedRobot).target.x = mousePoint.x;
+            m_robots.get(m_selectedRobot).target.y = mousePoint.y;
+            m_robots.get(m_selectedRobot).targetAchieved = false;
             repaint();
-        } else if (e.getButton() == MouseEvent.BUTTON3) {
+        }
+        else if (e.getButton() == MouseEvent.BUTTON3) {
             if (e.isShiftDown()) {
                 for(var rect : m_rectangles) {
                     if (rect.contains(mousePoint)) {
                         m_rectangles.remove(rect);
-                        Logger.info("Прямоугольк удален");
+                        Logger.info("Прямоугольник удален");
                         return;
                     }
                 }
                 return;
             }
-            double minDistance = RobotLogic.getDistanceToMouse(m_robots.get(0), mousePoint);
-            m_selectedRobot = m_robots.get(0);
+            double minDistance = robotLogic.getDistanceToMouse(m_robots.get(0), mousePoint);
+            m_selectedRobot = 0;
             for (int i = 1; i < m_robots.size(); i++) {
                 var robot = m_robots.get(i);
-                double distance = RobotLogic.getDistanceToMouse(robot, mousePoint);
-                if (RobotLogic.getDistanceToMouse(robot, mousePoint) < minDistance) {
+                double distance = robotLogic.getDistanceToMouse(robot, mousePoint);
+                if (robotLogic.getDistanceToMouse(robot, mousePoint) < minDistance) {
                     minDistance = distance;
-                    m_selectedRobot = robot;
+                    m_selectedRobot = i;
                 }
             }
-            Logger.info("Выбран " + m_selectedRobot.name);
+            Logger.info("Выбран " + m_robots.get(m_selectedRobot).name);
         }
     }
 }
