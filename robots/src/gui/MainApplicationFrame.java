@@ -16,11 +16,12 @@ import javax.swing.UnsupportedLookAndFeelException;
 
 import gui.menu.MenuGenerator;
 import log.Logger;
+import utilities.parsedclass.GameVisualizerData;
 
-public class MainApplicationFrame extends JFrame
+public class MainApplicationFrame extends JFrame implements IMainApp
 {
     private final JDesktopPane desktopPane = new JDesktopPane();
-    private GameWindow gameWindow;
+    private final GameWindow gameWindow;
     public MainApplicationFrame() {
         //Make the big window be indented 50 pixels from each edge
         //of the screen.
@@ -43,7 +44,14 @@ public class MainApplicationFrame extends JFrame
         setJMenuBar(generateMenuBar());
         setDefaultCloseOperation(EXIT_ON_CLOSE);
     }
-    
+
+    public GameVisualizerData getGameVisualizer(){
+        return gameWindow.getGameVisualizer();
+    }
+    public void setGameVisualizer(GameVisualizerData gvd){
+        gameWindow.setGameVisualizer(gvd);
+    }
+
     protected LogWindow createLogWindow()
     {
         LogWindow logWindow = new LogWindow(Logger.getDefaultLogSource());
@@ -116,7 +124,19 @@ public class MainApplicationFrame extends JFrame
                 KeyEvent.VK_A, (event) -> {
             gameWindow.addBot();
             Logger.debug("Робот добавлен");});
+        var connectWithSomeProgram = MenuGenerator.createMenuItem("Передать симуляцию по локальной сети",
+                KeyEvent.VK_C, (event) ->{
+                    ConnectWindow c = new ConnectWindow(this);
+                    addWindow(c);
+                });
+        var createServer = MenuGenerator.createMenuItem("Получить симуляцию по локальной сети",
+                KeyEvent.VK_C, (event) ->{
+                    CreateServerWindow c = new CreateServerWindow(this);
+                    addWindow(c);
+                });
         gameMenu.add(addRobot);
+        gameMenu.add(connectWithSomeProgram);
+        gameMenu.add(createServer);
         return gameMenu;
     }
 }
